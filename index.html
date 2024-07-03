@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loan Calculator</title>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    .navbar {
+        background: linear-gradient(90deg, #000080, #0000cd);
+        color: white;
+    }
+    h1 {
+        font-size: 2.5em;
+        text-align: center;
+        font-weight: bold;
+        color: white;
+        margin: 0;
+        padding: 15px 0;
+    }
+    .form-group label {
+        font-size: 1.1em;
+    }
+    .form-control {
+        font-size: 1.1em;
+    }
+    .result {
+        font-size: 1.1em;
+        margin-top: 20px;
+    }
+    .advert {
+        color: blue;
+        font-size: 1.1em;
+    }
+    .container-flex {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        height: 100vh;
+    }
+    .container-flex > div {
+        display: inline-block;
+        width: 45%;
+        vertical-align: top;
+    }
+    .btn-group {
+        display: flex;
+        justify-content: space-between;
+    }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <h1>Standard Bank Loan Calculator</h1>
+        </a>
+    </div>
+</nav>
+
+<div class="container container-flex">
+    <div>
+        <div class="form-group">
+            <label for="principal"><i class="fas fa-money-check-alt"></i> Principal amount:</label>
+            <input type="number" class="form-control" id="principal" value="100000">
+        </div>
+        <div class="form-group">
+            <label for="interestRate"><i class="fas fa-percentage"></i> Annual interest rate (%):</label>
+            <input type="number" class="form-control" id="interestRate" value="12">
+            <small class="form-text text-muted">Prime interest rate: 11.75%</small>
+        </div>
+        <div class="form-group">
+            <label for="months"><i class="fas fa-calendar-alt"></i> Loan term (months):</label>
+            <input type="number" class="form-control" id="months" value="60">
+        </div>
+        <div class="form-group">
+            <label for="extra"><i class="fas fa-plus-circle"></i> Extra monthly payment (R):</label>
+            <input type="number" class="form-control" id="extra" value="0">
+        </div>
+        <button onclick="loanCalc()" class="btn btn-primary btn-block"><i class="fas fa-calculator"></i> Calculate Loan</button>
+    </div>
+    <div>
+        <div id="result" class="result alert alert-info">
+            <!-- Results will be displayed here -->
+        </div>
+        <div id="actions" class="mt-4">
+            <p class="advert"><i class="fas fa-phone"></i> Interested in a loan? Enter your cell number below and our service consultants will reach out to you within 24 hours:</p>
+            <input type="number" class="form-control" placeholder="e.g., 0860 123 000">
+            <div class="btn-group mt-2">
+                <button class="btn btn-success"><i class="fas fa-paper-plane"></i> Submit</button>
+                <button class="btn btn-primary" onclick="openAccount()"><i class="fas fa-university"></i> Open Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loanCalc() {
+    // Retrieve input values
+    let principal = parseFloat(document.getElementById('principal').value);
+    let annualInterestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+    let months = parseInt(document.getElementById('months').value);
+
+    // Monthly interest rate
+    let monthlyInterestRate = annualInterestRate / 12;
+
+    // Number of monthly payments
+    let numPayments = months;
+
+    // Monthly payment formula
+    let monthlyPayment = (principal * monthlyInterestRate) / (1 - Math.pow((1 + monthlyInterestRate), -numPayments));
+
+    // Service fee
+    let serviceFee = 100;
+
+    // Total monthly payment including service fee
+    let totalMonthlyPayment = monthlyPayment + serviceFee;
+
+    // Extra monthly payment
+    let extraPayment = parseFloat(document.getElementById('extra').value);
+
+    // Calculate the total interest paid without extra payments
+    let totalInterestPaidWithoutExtra = 0;
+    let currentBalance = principal;
+
+    for (let i = 0; i < numPayments; i++) {
+        let interestPayment = currentBalance * monthlyInterestRate;
+        let principalPayment = monthlyPayment - interestPayment;
+        currentBalance -= principalPayment;
+        totalInterestPaidWithoutExtra += interestPayment;
+    }
+
+    // If extra payment is 0, set the total interest paid with extra to be the same as without extra
+    let totalInterestPaidWithExtra, newYears, newMonths;
+
+    if (extraPayment === 0) {
+        totalInterestPaidWithExtra = totalInterestPaidWithoutExtra;
+        newYears = Math.floor(months / 12);
+        newMonths = months % 12;
+    } else {
+        // Calculate the new loan period with extra payments
+        currentBalance = principal;
+        totalInterestPaidWithExtra = 0;
+        let months = 0;
+
+        while (currentBalance > 0) {
+            // Calculate interest for the current balance
+            let interestPayment = currentBalance * monthlyInterestRate;
+
+            // Apply total payment (excluding service fee) and add extra payment if any
+            let principalPayment = monthlyPayment + extraPayment - interestPayment;
+            currentBalance -= principalPayment;
+
+            // Accumulate total interest paid
+            totalInterestPaidWithExtra += interestPayment;
+            months++;
+
+            // Ensure we do not overpay in the last month
+            if (currentBalance < 0) {
+                totalInterestPaidWithExtra -= interestPayment;  // Revert last interest accumulation
+                principalPayment += currentBalance;  // Adjust principal payment
+                totalInterestPaidWithExtra += currentBalance * monthlyInterestRate;  // Add interest for remaining balance
+                currentBalance = 0;  // Set balance to zero to exit the loop
+            }
+        }
+
+        // Calculate the number of years and months for the new loan period
+        newYears = Math.floor(months / 12);
+        newMonths = months % 12;
+    }
+
+    // Total amount paid without extra payments
+    let totalAmountPaidWithoutExtra = totalMonthlyPayment * numPayments;
+
+    // Total interest saved
+    let interestSaved = totalInterestPaidWithoutExtra - totalInterestPaidWithExtra;
+
+    // Display results in the 'result' div
+    let resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = `
+        <p><i class="fas fa-money-bill-wave"></i> Total Monthly Payment: R${totalMonthlyPayment.toFixed(2)}</p>
+        <p><i class="fas fa-clock"></i> New Loan Period: ${newYears} years and ${newMonths} months</p>
+        <p><i class="fas fa-money-bill-alt"></i> Total Interest Paid <b>with</b> Extra Payments: R${totalInterestPaidWithExtra.toFixed(2)}</p>
+        <p><i class="fas fa-money-bill-alt"></i> Total Interest Paid <b>without Extra</b> Payments: R${totalInterestPaidWithoutExtra.toFixed(2)}</p>
+        <p><i class="fas fa-piggy-bank"></i> Interest Saved by Paying Extra: R${interestSaved.toFixed(2)}</p>
+        <p><i class="fas fa-hand-holding-usd"></i> Service Fee: R${serviceFee.toFixed(2)}</p>
+    `;
+}
+
+function openAccount() {
+    // Redirect to a hypothetical account opening page
+    window.location.href = "https://www.standardbank.co.za/open-account";
+}
+</script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</body>
+</html>
